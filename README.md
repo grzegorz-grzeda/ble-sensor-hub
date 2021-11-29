@@ -19,9 +19,9 @@ The configuration is as follows (example):
         "a4:c1:38:JJ:KK:LL": "/room10"
     },
     "scan_interval": "10",
-    "sleep_interval": "20",
     "mqtt_broker_ip":"<MQTT_BROKER_IP_HERE>",
     "mqtt_broker_port": "<MQTT_BROKER_PORT_HERE>"
+    "mqtt_trigger_topic": "/measure"
 }
 ```
 
@@ -30,7 +30,7 @@ When everything is set up:
 - the program starts,
 - fetches configuration from the defined server location,
 - connects to the MQTT broker
-- periodically scans the BLE area for devices
+- waits for a trigger message from the trigger topic and starts BLE scan
 - if finds a device from the whitelist:
    - it presumes its a ATC1441, 
    - parses the service data,

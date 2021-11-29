@@ -3,6 +3,7 @@ from bluepy.btle import Scanner as ble_scanner
 import paho.mqtt.client as mqtt_client
 from requests import get as get_request
 from json import load as load_json_from_file, loads as load_json_from_string, dump as dump_json_to_file
+from json import dumps as dump_json_to_string
 from sys import exit
 from logging import info as i, error as e, basicConfig as basic_logging_config, INFO
 from time import sleep
@@ -34,6 +35,7 @@ def get_system_configuration():
     """
     Get the basic configuration
     """
+    i("Loading system configuration")
     with open(CONFIG) as config_json:
         return load_json_from_file(config_json)
 
@@ -42,6 +44,7 @@ def get_measurement_configuration(api_server_url):
     """
     Get rest of configuration from api server
     """
+    i("Loading measurement configuration")
     r = get_request(api_server_url)
     if(r.status_code == 200):
         return load_json_from_string(r.text)
@@ -56,6 +59,7 @@ def connect_mqtt(broker, port, id):
     def on_connect(_client, _userdata, _flags, rc):
         if rc != 0:
             raise Exception(f"Counldn't connect to MQTT Broker {broker}:{port}")
+    i("Connecting to MQTT broker")
     client = mqtt_client.Client(id)
     client.on_connect = on_connect
     client.connect(broker, port)
@@ -72,11 +76,27 @@ def handle_single_device(dev, devices, mqtt):
         for (adtype, _, value) in dev.getScanData():
             if (adtype == 22):
                 topic = devices[address]
+                battery = int(value[22:24], 16)
                 humidity = int(value[20:22], 16)
                 temperature = int(value[16:20], 16) / 10
-                i(f"=> {address} @ {rssi} dBm, MQTT: {topic}")
-                mqtt.publish(f"{topic}/t", temperature)
-                mqtt.publish(f"{topic}/h", humidity)
+                data = {
+                    "t": temperature,
+                    "h": humidity,
+                    "b": battery,
+                    "r": rssi
+                }
+                i(f"{address} @ {rssi} dBm: {temperature} C, {humidity} % RH, battery {battery} %")
+                mqtt.publish(topic, dump_json_to_string(data))
+
+
+def on_mqtt_message_prototype(scanner, config):
+    def on_mqtt_message(client, userdata, message):
+        i("Received trigger, scanning BLE")
+        discovered_devices = scanner.scan(float(config["scan_interval"]))
+        for dev in discovered_devices:
+            handle_single_device(dev, config["whitelist"], client)
+
+    return on_mqtt_message
 
 
 def main():
@@ -89,13 +109,11 @@ def main():
             system_config = get_system_configuration()
             config = get_measurement_configuration(system_config["api_server"])
             mqtt = connect_mqtt(config["mqtt_broker_ip"], int(config["mqtt_broker_port"]), system_config["mqtt_id"])
-            mqtt.loop_start()
             scanner = ble_scanner()
-            while(True):
-                discovered_devices = scanner.scan(float(config["scan_interval"]))
-                for dev in discovered_devices:
-                    handle_single_device(dev, config["whitelist"], mqtt)
-                sleep(float(config["sleep_interval"]))
+            mqtt.on_message = on_mqtt_message_prototype(scanner, config)
+            mqtt.subscribe(config["mqtt_trigger_topic"])
+            i("Waiting for MQTT trigger")
+            mqtt.loop_forever()
         except FileNotFoundError as exp:
             e(f"Couldn't find configuration file '{exp.filename}'!")
             create_system_configuration_template()
@@ -105,6 +123,8 @@ def main():
             exit(0)
         except Exception as exp:
             e(exp)
+        finally:
+            mqtt.disconnect()
 
 
 if __name__ == "__main__":
