@@ -75,8 +75,8 @@ def handle_single_device(dev, devices, mqtt):
                 humidity = int(value[20:22], 16)
                 temperature = int(value[16:20], 16) / 10
                 i(f"=> {address} @ {rssi} dBm, MQTT: {topic}")
-                data_to_send = f"{temperature};{humidity}"
-                mqtt.publish(f"{topic}", data_to_send)
+                mqtt.publish(f"{topic}/t", temperature)
+                mqtt.publish(f"{topic}/h", humidity)
 
 
 def main():
