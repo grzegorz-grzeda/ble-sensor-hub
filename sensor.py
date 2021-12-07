@@ -66,6 +66,17 @@ def connect_mqtt(broker, port, id):
     return client
 
 
+def signed_hex_string_to_int(value):
+    """
+    Convert signed hex string to int
+    """
+    bits = 16
+    result = int(value, bits)
+    if result & (1 << (bits-1)):
+        result -= 1 << bits
+    return result
+
+
 def handle_single_device(dev, devices, mqtt):
     """
     Handle a single entry of BLE Scanning
@@ -78,7 +89,7 @@ def handle_single_device(dev, devices, mqtt):
                 topic = devices[address]
                 battery = int(value[22:24], 16)
                 humidity = int(value[20:22], 16)
-                temperature = int(value[16:20], 16) / 10
+                temperature = signed_hex_string_to_int(value[16:20]) / 10
                 data = {
                     "t": temperature,
                     "h": humidity,
