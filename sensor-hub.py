@@ -15,7 +15,8 @@ def get_sleep_interval(sleep_interval_from_config):
 
 def main():
     sh = logging.StreamHandler()
-    sh.format('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    sh.format(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    sh.setLevel(logging.INFO)
     logger = logging.getLogger('sensor-hub')
     logger.setLevel(logging.INFO)
     logger.addHandler(sh)
