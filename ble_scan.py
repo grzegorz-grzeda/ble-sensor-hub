@@ -1,5 +1,7 @@
+import logging
 from bluepy.btle import Scanner as ble_scanner
 
+module_logger = logging.getLogger('sensor-hub.ble_scan')
 
 def signed_hex_string_to_int(value):
     """
@@ -14,6 +16,7 @@ def signed_hex_string_to_int(value):
 
 def handle_single_device(device, device_whitelist):
     address = device.addr.lower()
+    module_logger.info(f"Handling device {address}")
     if address in device_whitelist:
         
         for (adtype, _, value) in device.getScanData():
@@ -32,7 +35,9 @@ def handle_single_device(device, device_whitelist):
 
 def scan_for_devices(device_whitelist, scan_interval):
     result = []
+    module_logger.info("Claiming BLE Scanner")
     scanner = ble_scanner()
+    module_logger.info("Scanning for devices")
     discovered_devices = scanner.scan(scan_interval)
     for dev in discovered_devices:
         measurement = handle_single_device(dev, device_whitelist)
