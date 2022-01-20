@@ -17,9 +17,8 @@ def signed_hex_string_to_int(value):
 
 def handle_single_device(device, device_whitelist):
     address = device.addr.lower()
-    module_logger.info(f"Handling device {address}")
     if address in device_whitelist:
-        
+        module_logger.info(f"Handling device {address}")
         for (adtype, _, value) in device.getScanData():
             if (adtype == 22):
                 sensor = device_whitelist[address]
