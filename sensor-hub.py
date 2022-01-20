@@ -1,3 +1,4 @@
+import sys
 import logging
 from http_requests import get_sensors_config, send_sensor_values
 from ble_scan import scan_for_devices
@@ -14,12 +15,15 @@ def get_sleep_interval(sleep_interval_from_config):
     return DEFAULT_SLEEP_TIME if sleep_interval_from_config < 1 else sleep_interval_from_config
 
 def main():
-    sh = logging.StreamHandler()
+    sh = logging.StreamHandler(sys.stdout)
+    eh = logging.StreamHandler(sys.stderr)
     sh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     sh.setLevel(logging.INFO)
+    eh.setLevel(logging.ERROR)
     logger = logging.getLogger('sensor-hub')
     logger.setLevel(logging.INFO)
     logger.addHandler(sh)
+    logger.addHandler(eh)
     try:
         logger.info("Getting sensors configuration")
         config = get_sensors_config()
@@ -33,6 +37,7 @@ def main():
     except Exception as error:
         logger.error(error)
     finally: 
+        logger.info("Going into sleep")
         sleep(sleep_interval)
 
 
